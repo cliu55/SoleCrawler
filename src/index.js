@@ -3,6 +3,8 @@ import bodyParser from 'body-parser';
 import {dialogflow, Image, Carousel, Table, Button, List} from 'actions-on-google';
 import rp from 'request-promise';
 import moment from 'moment';
+import {buildShoesCarousel, buildBrandsCarousel} from './utilities/carousel';
+import {manufactuers} from './utilities/manufacturers';
 
 const server = express();
 const assistant = dialogflow()
@@ -36,7 +38,7 @@ let welcomeList = async (conv, params, option) => {
 			await allReleases(conv);
 			break;
 		case 'brands':
-			releasesByBrand(conv);
+			chooseBrand(conv);
 			break;
 		default:
 			fallback(conv);
@@ -44,7 +46,6 @@ let welcomeList = async (conv, params, option) => {
 }
 
 let allReleases = async (conv) => {
-	console.log('here');
 	const hasScreen = conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
 	
 	let result = await rp(`http://www.solelinks.com/api/releases-by-month/?month=${moment().format('M')}&year=${moment().format('YYYY')}&page=1`);
@@ -52,23 +53,35 @@ let allReleases = async (conv) => {
 	let { data } = result.data;
 
 	if(hasScreen){
-		let list = {};
-		for(var i = 0; i < 10; i++){
-			list[data[i].id] = {
-				title: data[i].title, 
-				image: new Image({url: data[i].title_image_url, alt: data[i].title}),
-				description: data[i].release_date
-			};
-		}
-		// TODO: Replace with Browse Carousel in the future
-		let carousel = new Carousel({items: list});
+		let carousel = buildShoesCarousel(data);
+		conv.contexts.set('product_details', 3);
 		conv.ask('Here are some recent releases');
 		conv.ask(carousel);
 	}
 };
 
-let releasesByBrand = conv => {
-	conv.ask('Here are some recent releases from Adidas');
+let chooseBrand = conv => {
+	const hasScreen = conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
+
+	if(hasScreen){
+		let carousel = buildBrandsCarousel();
+		conv.contexts.set('brand_releases', 3)
+		conv.ask('Please choose one of the following brands');
+		conv.ask(carousel);
+	}
+}
+
+let releasesByBrand = async (conv, params, option) => {
+	const hasScreen = conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
+	let result = await rp(`http://www.solelinks.com/api/releases-by-month/?month=${moment().format('M')}&year=${moment().format('YYYY')}&page=1&manufacturer=${manufactuers[option].id}`);
+	result = JSON.parse(result);
+	let { data } = result.data;
+
+	if(hasScreen){
+		let carousel = buildShoesCarousel(data);
+		conv.ask(`Here are some recent releases from ${option}`);
+		conv.ask(carousel);
+	}
 }
 
 let productDetails = async (conv, params, option) => {
@@ -101,6 +114,7 @@ let fallback = conv => {
 assistant.intent('Default Welcome Intent', welcome);
 assistant.intent('Welcome List', welcomeList);
 assistant.intent('All Releases', allReleases);
+assistant.intent('Brand List', chooseBrand);
 assistant.intent('Releases By Brand', releasesByBrand);
 assistant.intent('Product Details', productDetails);
 assistant.intent('Default Fallback Intent', fallback);
