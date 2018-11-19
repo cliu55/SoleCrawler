@@ -29,6 +29,11 @@ export const releasesByBrand = async (conv, params, option) => {
 	result = JSON.parse(result);
 	let { data } = result.data;
 
+	if(!data.length){
+		conv.ask(`I am sorry, there are no recent releases from ${option}`)
+		return;
+	}
+
 	if(hasScreen){
 		if(data.length === 1){
 			await productDetails(conv, {}, data[0].id);

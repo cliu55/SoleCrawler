@@ -3,11 +3,11 @@ import { allReleases, releasesByBrand, chooseBrand, productDetails } from "./rel
 import { fallback } from "./fallback";
 
 export const registerHandlers = assistant => {
-    assistant.intent('Default Welcome Intent', welcome);
-    assistant.intent('Welcome List', welcomeList);
-    assistant.intent('All Releases', allReleases);
-    assistant.intent('Brand List', chooseBrand);
-    assistant.intent('Releases By Brand', releasesByBrand);
-    assistant.intent('Product Details', productDetails);
-    assistant.intent('Default Fallback Intent', fallback);
+    assistant.intent('welcome', welcome);
+    assistant.intent('welcome.list', welcomeList);
+    assistant.intent('releases.all', allReleases);
+    assistant.intent('releases.brand', releasesByBrand);
+    assistant.intent('releases.brand.list', chooseBrand);
+    assistant.intent('releases.detail', productDetails);
+    assistant.intent('fallback', fallback);
 }
