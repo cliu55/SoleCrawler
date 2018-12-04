@@ -19,14 +19,15 @@ export const allReleases = async conv => {
 	let { data } = result.data;
 
 	if(hasScreen){
-		if(data.length-(page-1)*10 === 1){
+		const start = (page-1)*10;
+		if(data.length-start === 1){
 			await productDetails(conv, {}, data[data.length-1].id);
 			return;
 		} 
 		if(page>1){
 			conv.add(new Suggestions('Previous'));
 		}
-		if(page*10 < data.length){
+		if(start+data.length%10 < data.length){
 			conv.add(new Suggestions('Next'));
 		} else {
 			conv.ask('There are no more releases');
@@ -42,7 +43,7 @@ export const allReleases = async conv => {
 
 export const releasesByBrand = async (conv, params = {}, option) => {
 	const hasScreen = conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
-	
+
 	let page = conv.contexts.get('releasesbrand-followup').parameters ? conv.contexts.get('releasesbrand-followup').parameters.page : 1;
 	option = conv.contexts.get('releasesbrand-followup').parameters ? conv.contexts.get('releasesbrand-followup').parameters.option : option;
 	if(conv.intent === 'releases.brand.next') {
@@ -53,21 +54,22 @@ export const releasesByBrand = async (conv, params = {}, option) => {
 	let result = await rp(`http://www.solelinks.com/api/releases-by-month/?month=${moment().format('M')}&year=${moment().format('YYYY')}&page=1&manufacturer=${manufactuers[option].id}`);
 	result = JSON.parse(result);
 	let { data } = result.data;
-
+	
 	if(!data.length){
 		conv.ask(`I am sorry, there are no recent releases from ${option}`)
 		return;
 	}
 
 	if(hasScreen){
-		if(data.length-(page-1)*10 === 1){
+		const start = (page-1)*10;
+		if(data.length-start === 1){
 			await productDetails(conv, {}, data[data.length-1].id);
 			return;
 		} 
 		if(page>1){
 			conv.add(new Suggestions('Previous'));
 		}
-		if(page*10 < data.length){
+		if(start+data.length%10 < page*10){
 			conv.add(new Suggestions('Next'));
 		} else {
 			conv.ask(`There are no more releases from ${option}.`);
