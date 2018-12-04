@@ -1,31 +1,55 @@
 import rp from 'request-promise';
 import moment from 'moment';
-import { Table, Image, Button, LinkOutSuggestion } from "actions-on-google";
+import { Table, Image, Button, LinkOutSuggestion, Suggestions } from "actions-on-google";
 import { buildShoesCarousel, buildBrandsCarousel } from "../utilities/carousel";
 import { manufactuers } from "../utilities/manufacturers";
 import { createCalendarLink } from "../utilities/calendar";
 
-export const allReleases = async (conv) => {
+export const allReleases = async conv => {
 	const hasScreen = conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
-	
+
+	let page = conv.contexts.get('releasesall-followup') ? conv.contexts.get('releasesall-followup').parameters.page : 1;
+	if(conv.intent === 'releases.all.next') {
+		page++;
+	} else if (conv.intent === 'releases.all.previous' && page-1 !== 0) {
+		page--;
+	}
 	let result = await rp(`http://www.solelinks.com/api/releases-by-month/?month=${moment().format('M')}&year=${moment().format('YYYY')}&page=1`);
 	result = JSON.parse(result);
 	let { data } = result.data;
 
 	if(hasScreen){
-		if(data.length === 1){
-			await productDetails(conv, {}, data[0].id);
-		} else {
-			let carousel = buildShoesCarousel(data);
-			conv.contexts.set('product_details', 3);
-			conv.ask('Here are some recent releases');
-			conv.ask(carousel);
+		if(data.length-(page-1)*10 === 1){
+			await productDetails(conv, {}, data[data.length-1].id);
+			return;
+		} 
+		if(page>1){
+			conv.add(new Suggestions('Previous'));
 		}
+		if(page*10 < data.length){
+			conv.add(new Suggestions('Next'));
+		} else {
+			conv.ask('There are no more releases');
+			return;
+		}
+		let carousel = buildShoesCarousel(data, page);
+		conv.contexts.set('product_details', 3);
+		conv.contexts.set('releasesall-followup', 3, { page : page });
+		conv.add('Here are some recent releases');
+		conv.add(carousel);
 	}
 };
 
-export const releasesByBrand = async (conv, params, option) => {
+export const releasesByBrand = async (conv, params = {}, option) => {
 	const hasScreen = conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
+	
+	let page = conv.contexts.get('releasesbrand-followup').parameters ? conv.contexts.get('releasesbrand-followup').parameters.page : 1;
+	option = conv.contexts.get('releasesbrand-followup').parameters ? conv.contexts.get('releasesbrand-followup').parameters.option : option;
+	if(conv.intent === 'releases.brand.next') {
+		page++;
+	} else if (conv.intent === 'releases.brand.previous' && page-1 !== 0) {
+		page--;
+	}
 	let result = await rp(`http://www.solelinks.com/api/releases-by-month/?month=${moment().format('M')}&year=${moment().format('YYYY')}&page=1&manufacturer=${manufactuers[option].id}`);
 	result = JSON.parse(result);
 	let { data } = result.data;
@@ -36,15 +60,27 @@ export const releasesByBrand = async (conv, params, option) => {
 	}
 
 	if(hasScreen){
-		if(data.length === 1){
-			await productDetails(conv, {}, data[0].id);
-		} else {
-			let carousel = buildShoesCarousel(data);
-			conv.ask(`Here are some recent releases from ${option}`);
-			conv.ask(carousel);
+		if(data.length-(page-1)*10 === 1){
+			await productDetails(conv, {}, data[data.length-1].id);
+			return;
+		} 
+		if(page>1){
+			conv.add(new Suggestions('Previous'));
 		}
+		if(page*10 < data.length){
+			conv.add(new Suggestions('Next'));
+		} else {
+			conv.ask(`There are no more releases from ${option}.`);
+			return;
+		}
+		let carousel = buildShoesCarousel(data, page);
+		conv.contexts.set('product_details', 3);
+		conv.contexts.set('brand_releases', 3);
+		conv.contexts.set('releasesbrand-followup', 3, { page : page, option : option});
+		conv.add(`Here are some recent releases from ${option}`);
+		conv.ask(carousel);
 	}
-}
+};
 
 export const chooseBrand = conv => {
 	const hasScreen = conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');

@@ -1,9 +1,11 @@
 import {Image, Carousel} from 'actions-on-google';
 import {manufactuers} from "./manufacturers";
 
-export let buildShoesCarousel = data => {
+export let buildShoesCarousel = (data, page = 1) => {
+    let start = (page-1)*10;
+    let end = page*10 > data.length ? start+data.length%10 : page*10;
     let list = {};
-    for(var i = 0; i < (10 > data.length ? data.length : 10); i++){
+    for(var i = start; i < end; i++){
         list[data[i].id] = {
             title: data[i].title, 
             image: new Image({url: data[i].title_image_url, alt: data[i].title}),
